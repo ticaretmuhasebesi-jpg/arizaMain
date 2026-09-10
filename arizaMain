@@ -1,0 +1,790 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(MyApp());
+}
+
+
+
+Map<String, Map<String, dynamic>> parcalar = {
+  'P001': {'ad': 'Alev sensörü', 'fiyat': 850},
+  'P002': {'ad': 'Termostat', 'fiyat': 400},
+  'P003': {'ad': 'Fan motoru', 'fiyat': 1200},
+  'P004': {'ad': 'Dönüş sensörü', 'fiyat': 950},
+  'P005': {'ad': 'Atık gaz sensörü', 'fiyat': 1100},
+  'P006': {'ad': 'Isı eşanjörü', 'fiyat': 1350},
+  'P007': {'ad': 'Gidiş sensörü', 'fiyat': 600},
+};
+
+
+
+
+// ARIZA VERİLERİ **********************
+Map<String, List<Map<String, String>>> arizaVerileri = {
+  'E.C.A': [
+    {'kod': 'A02', 'aciklama': 'Yanlış alev sinyali', 'model': 'Eski A/E Serisi', 'parcaId': 'P001'},
+    {'kod': 'A03', 'aciklama': 'Aşırı sıcaklık uyarısı', 'model': 'Eski A/E Serisi', 'parcaId': 'P002'},
+    {'kod': 'A05', 'aciklama': 'Fan veya hava akış uyarısı', 'model': 'Eski A/E Serisi', 'parcaId': 'P003'},
+  ],
+  'Vaillant': [
+    {'kod': 'F.01', 'aciklama': 'Dönüş sensörü kesintisi', 'model': 'Turbotec / Atmotec', 'parcaId': 'P004'},
+    {'kod': 'F.05', 'aciklama': 'Atık gaz sensörü kesintisi', 'model': 'Turbotec / Atmotec', 'parcaId': 'P005'},
+  ],
+  'Baymak': [
+    {'kod': 'H.01.05', 'aciklama': 'Gidiş dönüş arası maksimum sıcaklık farkı', 'model': 'Lunatec / H.02.07', 'parcaId': 'P006'},
+  ],
+  'Demirdöküm': [
+    {'kod': 'F.000', 'aciklama': 'Gidiş devresi sıcaklık sensörü sinyali kesildi', 'model': 'Nitromix Loni', 'parcaId': 'P007'},
+    {'kod': 'F.001', 'aciklama': 'Dönüş devresi sıcaklık sensörü sinyali kesildi', 'model': 'Nitromix Loni', 'parcaId': 'P004'},
+    {'kod': 'F.010', 'aciklama': 'Gidiş devresi sıcaklık sensörü kısa devre', 'model': 'Nitromix Loni', 'parcaId': 'P007'},
+  ],
+};
+
+// ARIZA VERİLERİ SONU *******************
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+  
+  return MaterialApp(
+  title: 'Arıza Rehberi',
+  theme: ThemeData(
+    primarySwatch: Colors.indigo,
+    appBarTheme: AppBarTheme(
+      backgroundColor: Colors.indigo,
+      foregroundColor: Colors.white,
+      titleTextStyle: TextStyle(
+        color: Colors.white,
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  ),
+  home: MarkaSecimEkrani(),
+);
+
+
+  }
+}
+
+// marka seçim ekranı
+
+class MarkaSecimEkrani extends StatelessWidget {
+  final List<String> markalar = [
+    'E.C.A',
+    'Vaillant',
+    'Baymak',
+    'Demirdöküm',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      
+	  appBar: AppBar(
+	  title: Text('Arıza Rehberi'),
+	  actions: [
+	  IconButton(
+      icon: Icon(Icons.build),
+      tooltip: 'Parçalar',
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ParcaKatalogEkrani(),
+          ),
+        );
+      },
+    ),
+  ],
+),
+	  
+	  
+	  
+      body: ListView.builder(
+        itemCount: markalar.length,
+        itemBuilder: (context, index) {
+        
+		
+		return Card(
+  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  child: ListTile(
+    contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+    leading: Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.indigo.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(
+        Icons.home_repair_service,
+        color: Colors.indigo,
+        size: 28,
+      ),
+    ),
+    title: Text(
+      markalar[index],
+      style: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+    trailing: Icon(Icons.arrow_forward, color: Colors.indigo),
+    onTap: () {
+		
+		
+			  
+			  
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ArizaKodlariEkrani(marka: markalar[index]),
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+
+// ARIZA KODLARI EKRANI *************************************
+
+class ArizaKodlariEkrani extends StatefulWidget {
+  final String marka;
+
+  ArizaKodlariEkrani({required this.marka});
+
+  @override
+  _ArizaKodlariEkraniState createState() => _ArizaKodlariEkraniState();
+}
+
+class _ArizaKodlariEkraniState extends State<ArizaKodlariEkrani> {
+  String aramaKelimesi = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final arizalar = arizaVerileri[widget.marka] ?? [];
+    
+    final filtrelenmisArizalar = arizalar.where((ariza) {
+      return ariza['kod']!.toLowerCase().contains(aramaKelimesi.toLowerCase()) ||
+          ariza['aciklama']!.toLowerCase().contains(aramaKelimesi.toLowerCase());
+    }).toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${widget.marka} Arıza Kodları'),
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.all(16),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Arıza kodu veya açıklama ara...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onChanged: (deger) {
+                setState(() {
+                  aramaKelimesi = deger;
+                });
+              },
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: filtrelenmisArizalar.length,
+              itemBuilder: (context, index) {
+              
+			  
+			  return Card(
+				  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+				  child: ListTile(
+					contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+					leading: Container(
+					  width: 50,
+					  height: 50,
+					  decoration: BoxDecoration(
+						color: Colors.red.withOpacity(0.1),
+						borderRadius: BorderRadius.circular(10),
+					  ),
+					  child: Icon(
+						Icons.error_outline,
+						color: Colors.red,
+						size: 28,
+					  ),
+					),
+					title: Text(
+					  filtrelenmisArizalar[index]['kod']!,
+					  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+					),
+					
+					
+					subtitle: Column(
+					  crossAxisAlignment: CrossAxisAlignment.start,
+					  children: [
+						Text(
+						  filtrelenmisArizalar[index]['aciklama']!,
+						  style: TextStyle(fontSize: 16),
+						),
+						SizedBox(height: 4),
+						Text(
+						  'Model: ${filtrelenmisArizalar[index]['model']}',
+						  style: TextStyle(fontSize: 14, color: Colors.grey[600], fontStyle: FontStyle.italic),
+						),
+					  ],
+					),
+					
+					
+					trailing: Icon(Icons.info_outline, color: Colors.indigo),
+					onTap: () {
+			  
+						Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ArizaDetayEkrani(
+                            marka: widget.marka,
+                            ariza: filtrelenmisArizalar[index],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+// ARIZA DETAY EKRANI
+
+class ArizaDetayEkrani extends StatefulWidget {
+  final String marka;
+  final Map<String, String> ariza;
+
+  ArizaDetayEkrani({required this.marka, required this.ariza});
+
+  @override
+  _ArizaDetayEkraniState createState() => _ArizaDetayEkraniState();
+}
+
+class _ArizaDetayEkraniState extends State<ArizaDetayEkrani> {
+  TextEditingController servisUcretiController = TextEditingController();
+  double servisUcreti = 0;
+  double toplamTutar = 0;
+
+@override
+void initState() {
+  super.initState();
+  servisUcretiController.clear();
+  servisUcreti = 0;
+  toplamTutar = 0;
+}
+
+
+@override
+  void dispose() {
+    servisUcretiController.dispose();
+    super.dispose();
+  }
+
+
+  void hesaplaToplam() {
+    double parcaFiyati = parcalar[widget.ariza['parcaId']]!['fiyat'].toDouble();
+    setState(() {
+      servisUcreti = double.tryParse(servisUcretiController.text) ?? 0;
+      toplamTutar = parcaFiyati + servisUcreti;
+    });
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    double parcaFiyati = parcalar[widget.ariza['parcaId']]!['fiyat'].toDouble();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${widget.ariza['kod']} Detayı'),
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Card(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'MARKA: ${widget.marka}',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.indigo,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'KOD: ${widget.ariza['kod']}',
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.red),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'AÇIKLAMA: ${widget.ariza['aciklama']}',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'MODEL: ${widget.ariza['model']}',
+                      style: TextStyle(fontSize: 16, fontStyle: FontStyle.italic, color: Colors.grey[700]),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'PARÇA: ${parcalar[widget.ariza['parcaId']]!['ad']}',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'PARÇA FİYATI: ${parcalar[widget.ariza['parcaId']]!['fiyat']} TL',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 20),
+            TextField(
+              controller: servisUcretiController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Servis Ücreti (TL)',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (deger) {
+                hesaplaToplam();
+              },
+            ),
+            SizedBox(height: 20),
+            Text(
+              'TOPLAM TUTAR: ${toplamTutar.toStringAsFixed(0)} TL',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                hesaplaToplam();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MusteriGosterimEkrani(
+                      marka: widget.marka,
+                      ariza: widget.ariza,
+                      servisUcreti: servisUcreti,
+                      toplamTutar: toplamTutar,
+                    ),
+                  ),
+                );
+              },
+              child: Text('Müşteriye Göster'),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.all(16),
+                textStyle: TextStyle(fontSize: 20),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+ 
+// ARIZA DETAY EKRANI SONU  
+ 
+
+// MÜŞTERİ GÖSTERİM EKRANI
+
+class MusteriGosterimEkrani extends StatelessWidget {
+  final String marka;
+  final Map<String, String> ariza;
+  final double servisUcreti;
+  final double toplamTutar;
+
+  MusteriGosterimEkrani({
+    required this.marka,
+    required this.ariza,
+    required this.servisUcreti,
+    required this.toplamTutar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Müşteri Gösterimi'),
+      ),
+      body: Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'TOPLAM TUTAR',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.indigo,
+                ),
+              ),
+              SizedBox(height: 20),
+              Text(
+                '${toplamTutar.toStringAsFixed(0)} TL',
+                style: TextStyle(
+                  fontSize: 56,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+              SizedBox(height: 40),
+              Text(
+                'Parça: ${parcalar[ariza['parcaId']]!['ad']}',
+                style: TextStyle(fontSize: 18),
+              ),
+              SizedBox(height: 10),
+              Text(
+                'Servis Ücreti: ${servisUcreti.toStringAsFixed(0)} TL',
+                style: TextStyle(fontSize: 18),
+              ),
+              SizedBox(height: 10),
+              Text(
+                'Marka: $marka',
+                style: TextStyle(fontSize: 18),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+// PARÇA KATALOG EKRANI
+class ParcaKatalogEkrani extends StatefulWidget {
+  @override
+  _ParcaKatalogEkraniState createState() => _ParcaKatalogEkraniState();
+}
+
+class _ParcaKatalogEkraniState extends State<ParcaKatalogEkrani> {
+  @override
+  Widget build(BuildContext context) {
+    final parcaListesi = parcalar.entries.toList();
+
+    return Scaffold(
+            
+	   appBar: AppBar(
+  title: Text('Parça Kataloğu'),
+  actions: [
+    IconButton(
+      icon: Icon(Icons.add),
+      tooltip: 'Yeni Parça Ekle',
+      onPressed: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ParcaEkleEkrani(),
+          ),
+        );
+        setState(() {});
+      },
+    ),
+  ],
+),
+	  
+      body: ListView.builder(
+        itemCount: parcaListesi.length,
+        itemBuilder: (context, index) {
+          final parcaId = parcaListesi[index].key;
+          final parca = parcaListesi[index].value;
+
+          return Card(
+            margin: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: ListTile(
+              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              leading: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.indigo.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.settings,
+                  color: Colors.indigo,
+                  size: 28,
+                ),
+              ),
+              title: Text(
+                parca['ad'],
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                'Kod: $parcaId',
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${parca['fiyat']} TL',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Icon(Icons.edit, color: Colors.indigo),
+                ],
+              ),
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ParcaDuzenleEkrani(parcaId: parcaId),
+                  ),
+                );
+                setState(() {});
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+// PARÇA KATALOG EKRANI SONU
+
+class ParcaDuzenleEkrani extends StatefulWidget {
+  final String parcaId;
+
+  ParcaDuzenleEkrani({required this.parcaId});
+
+  @override
+  _ParcaDuzenleEkraniState createState() => _ParcaDuzenleEkraniState();
+}
+
+class _ParcaDuzenleEkraniState extends State<ParcaDuzenleEkrani> {
+  late TextEditingController adController;
+  late TextEditingController fiyatController;
+
+  @override
+  void initState() {
+    super.initState();
+    adController = TextEditingController(text: parcalar[widget.parcaId]!['ad']);
+    fiyatController = TextEditingController(
+      text: parcalar[widget.parcaId]!['fiyat'].toString(),
+    );
+  }
+
+  @override
+  void dispose() {
+    adController.dispose();
+    fiyatController.dispose();
+    super.dispose();
+  }
+
+  void kaydet() {
+    setState(() {
+      parcalar[widget.parcaId]!['ad'] = adController.text;
+      parcalar[widget.parcaId]!['fiyat'] = int.tryParse(fiyatController.text) ?? 0;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Parça güncellendi!')),
+    );
+
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      
+  appBar: AppBar(
+  title: Text('Parça Düzenle'),
+  actions: [
+    IconButton(
+      icon: Icon(Icons.delete),
+      tooltip: 'Parçayı Sil',
+      onPressed: () {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Parçayı Sil'),
+            content: Text('Bu parçayı silmek istediğinizden emin misiniz?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('İptal'),
+              ),
+              TextButton(
+                onPressed: () {
+                  parcalar.remove(widget.parcaId);
+                  Navigator.pop(context);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Parça silindi!')),
+                  );
+                },
+                child: Text('Sil', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+        );
+      },
+    ),
+  ],
+),
+	  
+      body: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: adController,
+              decoration: InputDecoration(
+                labelText: 'Parça Adı',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 20),
+            TextField(
+              controller: fiyatController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Fiyat (TL)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: kaydet,
+              child: Text('Kaydet'),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.all(16),
+                textStyle: TextStyle(fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ParcaEkleEkrani extends StatefulWidget {
+  @override
+  _ParcaEkleEkraniState createState() => _ParcaEkleEkraniState();
+}
+
+class _ParcaEkleEkraniState extends State<ParcaEkleEkrani> {
+  TextEditingController adController = TextEditingController();
+  TextEditingController fiyatController = TextEditingController();
+
+  @override
+  void dispose() {
+    adController.dispose();
+    fiyatController.dispose();
+    super.dispose();
+  }
+
+  void ekle() {
+    if (adController.text.isEmpty || fiyatController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lütfen tüm alanları doldurun!')),
+      );
+      return;
+    }
+    // Yeni parça ID'si oluştur (P008, P009...)
+     int enBuyukId = 0;
+    parcalar.keys.forEach((key) {
+      int id = int.tryParse(key.replaceAll('P', '')) ?? 0;
+      if (id > enBuyukId) enBuyukId = id;
+    });
+    String yeniParcaId = 'P${(enBuyukId + 1).toString().padLeft(3, '0')}';
+	
+
+    setState(() {
+      parcalar[yeniParcaId] = {
+        'ad': adController.text,
+        'fiyat': int.tryParse(fiyatController.text) ?? 0,
+      };
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Yeni parça eklendi: $yeniParcaId')),
+    );
+
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Yeni Parça Ekle'),
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: adController,
+              decoration: InputDecoration(
+                labelText: 'Parça Adı',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 20),
+            TextField(
+              controller: fiyatController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Fiyat (TL)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: ekle,
+              child: Text('Kaydet'),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.all(16),
+                textStyle: TextStyle(fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
