@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await parcalariYukle();
   runApp(MyApp());
 }
-
 
 
 Map<String, Map<String, dynamic>> parcalar = {
@@ -15,8 +18,6 @@ Map<String, Map<String, dynamic>> parcalar = {
   'P006': {'ad': 'Isı eşanjörü', 'fiyat': 1350},
   'P007': {'ad': 'Gidiş sensörü', 'fiyat': 600},
 };
-
-
 
 
 // ARIZA VERİLERİ **********************
@@ -41,6 +42,25 @@ Map<String, List<Map<String, String>>> arizaVerileri = {
 };
 
 // ARIZA VERİLERİ SONU *******************
+
+Future<void> parcalariKaydet() async {
+  final prefs = await SharedPreferences.getInstance();
+  String jsonString = jsonEncode(parcalar);
+  await prefs.setString('parcalar', jsonString);
+}
+
+Future<void> parcalariYukle() async {
+  final prefs = await SharedPreferences.getInstance();
+  String? jsonString = prefs.getString('parcalar');
+  if (jsonString != null) {
+    Map<String, dynamic> decoded = jsonDecode(jsonString);
+    parcalar.clear();
+    decoded.forEach((key, value) {
+      parcalar[key] = Map<String, dynamic>.from(value);
+    });
+  }
+}
+
 
 class MyApp extends StatelessWidget {
   @override
@@ -101,12 +121,12 @@ class MarkaSecimEkrani extends StatelessWidget {
 	  
 	  
 	  
-      body: ListView.builder(
-        itemCount: markalar.length,
-        itemBuilder: (context, index) {
+body: ListView.builder(
+   itemCount: markalar.length,
+   itemBuilder: (context, index) {
         
 		
-		return Card(
+return Card(
   margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
   child: ListTile(
     contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -132,9 +152,6 @@ class MarkaSecimEkrani extends StatelessWidget {
     ),
     trailing: Icon(Icons.arrow_forward, color: Colors.indigo),
     onTap: () {
-		
-		
-			  
 			  
                 Navigator.push(
                   context,
@@ -419,6 +436,7 @@ void initState() {
 // ARIZA DETAY EKRANI SONU  
  
 
+
 // MÜŞTERİ GÖSTERİM EKRANI
 
 class MusteriGosterimEkrani extends StatelessWidget {
@@ -582,6 +600,7 @@ class _ParcaKatalogEkraniState extends State<ParcaKatalogEkrani> {
   }
 }
 // PARÇA KATALOG EKRANI SONU
+
 
 class ParcaDuzenleEkrani extends StatefulWidget {
   final String parcaId;
